@@ -14,8 +14,8 @@ beta_prima = 2^19 - gamma - 1
 R = IntegerModRing(q)  
 PR.<X> = PolynomialRing(R)  
 Rk = PR.quotient(X^d + 1)  
+s = 2^16
 delta_s = (q - 1)/32 - 1
-
 load("tree.sage")
 load("NTT.sage")
 load("auxiliar_functions.sage")
@@ -57,7 +57,7 @@ class Prover:
 
         self.y_A = y_A_intt
 
-        self.w = HIGH_s(self.y_A)
+        self.w = HIGH_s(self.y_A, s)
         
         return self.w
     
@@ -72,10 +72,10 @@ class Prover:
         c_s2_ntt= multiply_constant_vector(c_ntt, s2_)
         c_s2_intt = INTT_vector(c_s2_ntt)
         low_content = substract_vectors(self.y_A, c_s2_intt, n)
-        low_cond = LOW_s(low_content)
+        low_cond = LOW_s(low_content, s)
 
         if not is_in_range(z, beta_prima) or not is_in_range(low_cond, delta_s - gamma):
-            return None, None
+            return None
         else:
             return z
 
@@ -96,9 +96,7 @@ class Verifier:
         c_t_ntt = multiply_constant_vector(NTT(self.c), NTT_vector(t))
         c_t_intt = INTT_vector(c_t_ntt)
         w_result = substract_vectors(A_z_intt, c_t_intt, n)
-        w_high = HIGH_s(w_result)
-        print("w_high:", w_high)
-        print("w_:", w_)
+        w_high = HIGH_s(w_result, s)
         if is_in_range(z, beta_prima) and w_high == w_:
             return True
         else:
@@ -108,17 +106,6 @@ class Verifier:
 v = Verifier()
 p = Prover()
 
-def HIGH_s(w, s=2^16):
-    w_high = []
-    for x in w:
-        w_high.append(PR([ZZ(coef) // s for coef in x.list()]))
-    return w_high
-
-def LOW_s(w, s=2^16):
-    w_low = []
-    for x in w:
-        w_low.append(PR([ZZ(coef) - (ZZ(coef)//s)*s for coef in x.list()]))
-    return w_low
 
 def simulate_protocol():
     A, t = p.keygen()
@@ -126,7 +113,16 @@ def simulate_protocol():
     c = v.step1(A, t)
     #TODO: To execute again when z is None
     z = p.step2(c)
-    accept_bool = v.step2(z, w, A, t)
-    return  accept_bool
-accept_bool = simulate_protocol()
-print("Verification:", accept_bool)
+    return  z, w, A, t
+
+while True:
+    z, w, A, t = simulate_protocol()
+    print("ss")
+
+    if z is None:
+            continue
+    else:
+        boolean = v.step2(z, w, A, t)
+        if boolean != False:
+            print("Verification:", boolean)
+            break

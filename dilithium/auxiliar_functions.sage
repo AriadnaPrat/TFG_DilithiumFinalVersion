@@ -54,3 +54,15 @@ def is_in_range(v, beta_bar):
 
 def substract_vectors(a, b, d1):
     return [a[i] - b[i] for i in range(d1)] 
+
+def HIGH_s(w, s):
+    w_high = []
+    for x in w:
+        w_high.append(PR([ZZ(coef) // s for coef in x.list()]))
+    return w_high
+
+def LOW_s(w, s=16):
+    w_low = []
+    for x in w:
+        w_low.append(PR([ZZ(coef) - (ZZ(coef)//s)*s for coef in x.list()]))
+    return w_low
