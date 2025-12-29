@@ -13,7 +13,6 @@ gamma = 49*4
 beta_prima = 2^19 - gamma - 1
 R = IntegerModRing(q)  
 PR.<X> = PolynomialRing(R)  
-Rk = PR.quotient(X^d + 1)  
 
 load("tree.sage")
 load("NTT.sage")
@@ -30,19 +29,19 @@ class Prover:
         self.s2 = None
         self.z1 = None
         self.z2 = None
-        self.A = None
+        self.A_ntt = None
         self.t = None
         
     def keygen(self):
         self.s1 = create_vector(beta, m)
         self.s2 = create_vector(beta, n)
-        self.A = create_matrix(n, m)
-        A_ntt = [NTT_vector(self.A[i]) for i in range(n)]
+        self.A_ntt = create_matrix_ntt(d, m, n)
+        #A_ntt = [NTT_vector(self.A[i]) for i in range(n)]
         s1_ntt = NTT_vector(self.s1)
-        t_ = multiply_vector_matrix(s1_ntt, A_ntt, n, m)
+        t_ = multiply_vector_matrix(s1_ntt, self.A_ntt, n, m)
         self.t = sum_vectors(INTT_vector(t_), self.s2, n)
 
-        return self.A, self.t
+        return self.A_ntt, self.t
         
     #Commitment
     def step1(self):
@@ -50,10 +49,10 @@ class Prover:
         self.y_2 = create_vector(gamma + beta_prima, n)
 
         y_1_ntt = NTT_vector(self.y_1)
-        A_ntt = [NTT_vector(self.A[i]) for i in range(n)]
-        y_1_A_ntt = multiply_vector_matrix(y_1_ntt, A_ntt, n, m)
+        y_1_A_ntt = multiply_vector_matrix(y_1_ntt, self.A_ntt, n, m)
         y_1_A_intt = INTT_vector(y_1_A_ntt)
         self.w = sum_vectors(y_1_A_intt, self.y_2, n)
+
         return self.w
     
     def step2(self, c):
@@ -79,11 +78,10 @@ class Verifier:
     def step1(self, A, t):
         self.c = generate_c() 
         shuffle(self.c)
-        return Rk(self.c)
+        return PR(self.c)
     
-    def step2(self, z1, z2, w_, A, t):
+    def step2(self, z1, z2, w_, A_ntt, t):
         if is_in_range(z1, beta_prima) and is_in_range(z2, beta_prima):
-            A_ntt = [NTT_vector(A[i]) for i in range(n)]
             z1_ntt = NTT_vector(z1)
             mult = multiply_vector_matrix(z1_ntt, A_ntt, n, m)
             mult_intt = INTT_vector(mult)
